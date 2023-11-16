@@ -143,6 +143,19 @@ contract Room {
         if (species == GRASS_TYPE) {
             uint32 balance = grassBalanceOfOwner[msg.sender];
             require(balance >= num, "Insufficient balance.");
+
+            uint32[] storage grassIds = grassOfOwner[msg.sender];
+            for (uint32 i=0; i<num; ++i) {
+                uint32 grassId = grassIds[i];
+                Grass storage grass = id2Grass[grassId];
+
+                int16 x = grass.x;
+                int16 y = grass.y;
+                action(x, y);
+
+            }
+
+
         } else if (species == SHEEP_TYPE) {
             uint32 balance = sheepBalanceOfOwner[msg.sender];
             require(balance >= num, "Insufficient balance.");
