@@ -1,0 +1,27 @@
+{
+  "name": "frogville",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BitBotDevelop/Frogville.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BitBotDevelop/Frogville/issues"
+  },
+  "homepage": "https://github.com/BitBotDevelop/Frogville#readme",
+  "devDependencies": {
+    "hardhat": "^2.19.1"
+  },
+  "dependencies": {
+    "@nomicfoundation/hardhat-foundry": "^1.1.1",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "hardhat-abi-exporter": "^2.10.1"
+  }
+}
