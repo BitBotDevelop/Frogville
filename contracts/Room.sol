@@ -131,38 +131,175 @@ contract Room {
         _buy(species, num, to);
     }
 
-    function sell(uint8 species, uint32 num) external nonreentrant {
-        _sell(species, num, msg.sender);
+    function sell(uint8 species, uint32[] calldata ids) external nonreentrant {
+        _sell(species, ids, msg.sender);
     }
 
-    function sell(uint8 species, uint32 num, address to) external nonreentrant {
-        _sell(species, num, to);
+    function sell(uint8 species, uint32[] calldata ids, address to) external nonreentrant {
+        _sell(species, ids, to);
     }
 
-    function _sell(uint8 species, uint32 num, address to) internal {
+    function _sell(uint8 species, uint32[] calldata ids, address to) internal {
+
+        uint256 value;
         if (species == GRASS_TYPE) {
-            uint32 balance = grassBalanceOfOwner[msg.sender];
-            require(balance >= num, "Insufficient balance.");
-
-            uint32[] storage grassIds = grassOfOwner[msg.sender];
-            for (uint32 i=0; i<num; ++i) {
-                uint32 grassId = grassIds[i];
-                Grass storage grass = id2Grass[grassId];
-
-                int16 x = grass.x;
-                int16 y = grass.y;
-                action(x, y);
-
-            }
-
+            value = sellGrass(ids);
 
         } else if (species == SHEEP_TYPE) {
-            uint32 balance = sheepBalanceOfOwner[msg.sender];
-            require(balance >= num, "Insufficient balance.");
+            value = sellSheep(ids);
+        
         } else {
-            uint32 balance = wolfBalanceOfOwner[msg.sender];
-            require(balance >= num, "Insufficient balance.");
+            value = sellWolf(ids);
         }
+
+        // totalValue -> 兑换成token transfer给用户
+    }
+
+    function sellGrass(uint32[] calldata ids) internal returns(uint256) {
+        uint32 balance = grassBalanceOfOwner[msg.sender];
+        require(balance >= ids.length, "Insufficient balance.");
+
+        uint8 size = 0;
+        int16[] memory loc_x = new int16[](10);
+        int16[] memory loc_y = new int16[](10);
+
+        uint256 totalValue;
+        for (uint32 i = 0; i < ids.length; ++i) {
+            uint32 grassId = ids[i];
+            Grass storage grass = id2Grass[grassId];
+            require(msg.sender == grass.owner, "wrong owner.");
+
+            // 记录<X,Y>集合
+            int16 x = grass.x;
+            int16 y = grass.y;
+            if (size == 0) {
+                loc_x[0] = x;
+                loc_y[0] = y;
+                ++size;
+            } else {
+                bool needAdd = true;
+                for (uint8 j = 0; j < size; ++i) {
+                    if (loc_x[j] == x && loc_y[j] == y) {
+                        needAdd = false;
+                        break;
+                    }
+                }
+                if (needAdd) {
+                    loc_x[size] = x;
+                    loc_y[size] = y;
+                    ++size;
+                }
+            }
+
+            totalValue += updateGrassValue(grass.value, grass.updateTime);
+            burnGrass(grassId);
+        }
+
+        // 推送地图变化
+        for (uint8 i=0; i < size; ++i) {
+            int16 x = loc_x[i];
+            int16 y = loc_y[i];
+            action(x, y);
+        }
+        return totalValue;
+    }
+
+    function sellSheep(uint32[] calldata ids) internal returns(uint256) {
+        uint32 balance = sheepBalanceOfOwner[msg.sender];
+        require(balance >= ids.length, "Insufficient balance.");
+
+        uint8 size = 0;
+        int16[] memory loc_x = new int16[](10);
+        int16[] memory loc_y = new int16[](10);
+
+        uint256 totalValue;
+        for (uint32 i = 0; i < ids.length; ++i) {
+            uint32 sheepId = ids[i];
+            Sheep storage sheep = id2Sheep[sheepId];
+            require(msg.sender == sheep.owner, "wrong owner.");
+
+            // 记录<X,Y>集合
+            int16 x = sheep.x;
+            int16 y = sheep.y;
+            if (size == 0) {
+                loc_x[0] = x;
+                loc_y[0] = y;
+                ++size;
+            } else {
+                bool needAdd = true;
+                for (uint8 j = 0; j < size; ++i) {
+                    if (loc_x[j] == x && loc_y[j] == y) {
+                        needAdd = false;
+                        break;
+                    }
+                }
+                if (needAdd) {
+                    loc_x[size] = x;
+                    loc_y[size] = y;
+                    ++size;
+                }
+            }
+
+            totalValue += updateSheepValue(sheep.value, sheep.updateTime);
+            burnSheep(sheepId);
+        }
+
+        // 推送地图变化
+        for (uint8 i=0; i < size; ++i) {
+            int16 x = loc_x[i];
+            int16 y = loc_y[i];
+            action(x, y);
+        }
+        return totalValue;
+    }
+
+    function sellWolf(uint32[] calldata ids) internal returns(uint256) {
+        uint32 balance = wolfBalanceOfOwner[msg.sender];
+        require(balance >= ids.length, "Insufficient balance.");
+
+        uint8 size = 0;
+        int16[] memory loc_x = new int16[](10);
+        int16[] memory loc_y = new int16[](10);
+
+        uint256 totalValue;
+        for (uint32 i = 0; i < ids.length; ++i) {
+            uint32 wolfId = ids[i];
+            Wolf storage wolf = id2Wolf[wolfId];
+            require(msg.sender == wolf.owner, "wrong owner.");
+
+            // 记录<X,Y>集合
+            int16 x = wolf.x;
+            int16 y = wolf.y;
+            if (size == 0) {
+                loc_x[0] = x;
+                loc_y[0] = y;
+                ++size;
+            } else {
+                bool needAdd = true;
+                for (uint8 j = 0; j < size; ++i) {
+                    if (loc_x[j] == x && loc_y[j] == y) {
+                        needAdd = false;
+                        break;
+                    }
+                }
+                if (needAdd) {
+                    loc_x[size] = x;
+                    loc_y[size] = y;
+                    ++size;
+                }
+            }
+
+            totalValue += updateWolfValue(wolf.value, wolf.updateTime);
+            burnWolf(wolfId);
+        }
+
+        // 推送地图变化
+        for (uint8 i=0; i < size; ++i) {
+            int16 x = loc_x[i];
+            int16 y = loc_y[i];
+            action(x, y);
+        }
+        return totalValue;
     }
 
     function _buy(uint8 species, uint32 num, address to) internal {
@@ -506,6 +643,12 @@ contract Room {
     }
 
     function updateSheepValue(uint256 _value, uint32 operateTime) internal view returns (uint256) {
+        uint32 diffTime = uint32(block.timestamp) - operateTime;
+        uint256 value = _value + diffTime / 100;
+        return value;
+    }
+
+    function updateWolfValue(uint256 _value, uint32 operateTime) internal view returns (uint256) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
         uint256 value = _value + diffTime / 100;
         return value;
