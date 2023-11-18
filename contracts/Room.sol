@@ -62,14 +62,14 @@ contract Room {
     int16 public constant paradise_y = -1;
 
     //物种上限
-    uint32 public WOLF_LIMIT;
-    uint32 public SHEEP_LIMIT;
-    uint32 public GRASS_LIMIT;
+    uint32 public WOLF_LIMIT = 32;
+    uint32 public SHEEP_LIMIT = 4096;
+    uint32 public GRASS_LIMIT = 32_768;
 
     //单个地址的物种持有上线
-    uint32 public WOLF_LIMIT_OF_OWNER;
-    uint32 public SHEEP_LIMIT_OF_OWNER;
-    uint32 public GRASS_LIMIT_OF_OWNER;
+    uint32 public WOLF_LIMIT_OF_OWNER = 2;
+    uint32 public SHEEP_LIMIT_OF_OWNER = 32;
+    uint32 public GRASS_LIMIT_OF_OWNER = 128;
 
     uint32 public totalWolf;
     uint32 public totalSheep;
@@ -78,6 +78,8 @@ contract Room {
     uint32 public globalWolfId;
     uint32 public globalSheepId;
     uint32 public globalGrassId;
+
+    uint32 public EAT_LIMIT = 3;
 
     //物种价格
     uint256 public wolfPrice;
@@ -112,6 +114,14 @@ contract Room {
 
     address public USDT;
     address public treasury;
+
+    constructor(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) {
+        wolfPrice = _wolfPrice;
+        sheepPrice = _sheepPrice;
+        grassPrice = _grassPrice;
+        USDT = _usdt;
+        treasury = _treasury;
+    }
 
     function buy(uint8 species, uint32 num) external nonreentrant {
         uint256 balance = IERC20(USDT).balanceOf(msg.sender);
@@ -421,7 +431,8 @@ contract Room {
             //eat sheep
             uint32[] storage sheepIds = sheepMap[x][y];
             uint256 newValue;
-            for (uint32 i = 0; i < sheepIds.length; ++i) {
+            //1次最多吃3只羊
+            for (uint32 i = 0; i < sheepIds.length && i < EAT_LIMIT; ++i) {
                 uint32 sheepId = sheepIds[i];
                 Sheep storage sheep = id2Sheep[sheepId];
                 uint32 blood = updateBlood(sheep.blood, sheep.updateTime);
@@ -441,7 +452,8 @@ contract Room {
         if (species == GRASS_TYPE) {
             uint32[] storage grassIds = grassMap[x][y];
             uint256 newValue;
-            for (uint32 i = 0; i < grassIds.length; ++i) {
+            //最多吃3颗草
+            for (uint32 i = 0; i < grassIds.length && i < EAT_LIMIT; ++i) {
                 uint32 grassId = grassIds[i];
                 Grass storage grass = id2Grass[grassId];
                 uint256 grassValue = updateGrassValue(grass.value, grass.updateTime);
@@ -638,19 +650,19 @@ contract Room {
 
     function updateGrassValue(uint256 _value, uint32 operateTime) internal view returns (uint256) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
-        uint256 value = _value + diffTime / 100;
+        uint256 value = _value + diffTime / 60;//convert to min
         return value;
     }
 
     function updateSheepValue(uint256 _value, uint32 operateTime) internal view returns (uint256) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
-        uint256 value = _value + diffTime / 100;
+        uint256 value = _value + diffTime / 60;//convert to min
         return value;
     }
 
     function updateWolfValue(uint256 _value, uint32 operateTime) internal view returns (uint256) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
-        uint256 value = _value + diffTime / 100;
+        uint256 value = _value + diffTime / 60;//convert to min
         return value;
     }
 
