@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.19;
 
 import "./interfaces/IERC20.sol";
+import "forge-std/console2.sol";
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 
 //1. room factory  @john
 //2. tokenomics / emissions @john
 //3. game @webber
 
 contract Room {
+    using SafeCast for uint256;
+    using SafeCast for int16;
+
     /*//////////////////////////////////////////////////////////////
                                 MODIFIERS
     //////////////////////////////////////////////////////////////*/
@@ -115,7 +121,13 @@ contract Room {
     address public USDT;
     address public treasury;
 
-    constructor(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) {
+    constructor(
+        uint256 _wolfPrice,
+        uint256 _sheepPrice,
+        uint256 _grassPrice,
+        address _usdt,
+        address _treasury
+    ) {
         wolfPrice = _wolfPrice;
         sheepPrice = _sheepPrice;
         grassPrice = _grassPrice;
@@ -145,19 +157,20 @@ contract Room {
         _sell(species, ids, msg.sender);
     }
 
-    function sell(uint8 species, uint32[] calldata ids, address to) external nonreentrant {
+    function sell(
+        uint8 species,
+        uint32[] calldata ids,
+        address to
+    ) external nonreentrant {
         _sell(species, ids, to);
     }
 
     function _sell(uint8 species, uint32[] calldata ids, address to) internal {
-
         uint256 value;
         if (species == GRASS_TYPE) {
             value = sellGrass(ids);
-
         } else if (species == SHEEP_TYPE) {
             value = sellSheep(ids);
-        
         } else {
             value = sellWolf(ids);
         }
@@ -165,7 +178,7 @@ contract Room {
         // totalValue -> 兑换成token transfer给用户
     }
 
-    function sellGrass(uint32[] calldata ids) internal returns(uint256) {
+    function sellGrass(uint32[] calldata ids) internal returns (uint256) {
         uint32 balance = grassBalanceOfOwner[msg.sender];
         require(balance >= ids.length, "Insufficient balance.");
 
@@ -206,7 +219,7 @@ contract Room {
         }
 
         // 推送地图变化
-        for (uint8 i=0; i < size; ++i) {
+        for (uint8 i = 0; i < size; ++i) {
             int16 x = loc_x[i];
             int16 y = loc_y[i];
             action(x, y);
@@ -214,7 +227,7 @@ contract Room {
         return totalValue;
     }
 
-    function sellSheep(uint32[] calldata ids) internal returns(uint256) {
+    function sellSheep(uint32[] calldata ids) internal returns (uint256) {
         uint32 balance = sheepBalanceOfOwner[msg.sender];
         require(balance >= ids.length, "Insufficient balance.");
 
@@ -255,7 +268,7 @@ contract Room {
         }
 
         // 推送地图变化
-        for (uint8 i=0; i < size; ++i) {
+        for (uint8 i = 0; i < size; ++i) {
             int16 x = loc_x[i];
             int16 y = loc_y[i];
             action(x, y);
@@ -263,7 +276,7 @@ contract Room {
         return totalValue;
     }
 
-    function sellWolf(uint32[] calldata ids) internal returns(uint256) {
+    function sellWolf(uint32[] calldata ids) internal returns (uint256) {
         uint32 balance = wolfBalanceOfOwner[msg.sender];
         require(balance >= ids.length, "Insufficient balance.");
 
@@ -304,7 +317,7 @@ contract Room {
         }
 
         // 推送地图变化
-        for (uint8 i=0; i < size; ++i) {
+        for (uint8 i = 0; i < size; ++i) {
             int16 x = loc_x[i];
             int16 y = loc_y[i];
             action(x, y);
@@ -332,7 +345,7 @@ contract Room {
             id += 1;
 
             //2. generate new coordinate
-            (int16 x, int16 y) = genCoordinate(0, 0, id);
+            (int16 x, int16 y) = genCoordinate(-1, -1, id);
 
             //3. action on (x,y)
             action(x, y);
@@ -344,20 +357,33 @@ contract Room {
         updateAssetUniqueId(species, id);
     }
 
-    function _paramsCheck(uint8 species, uint32 num, address to) internal view returns (bool) {
+    function _paramsCheck(
+        uint8 species,
+        uint32 num,
+        address to
+    ) internal view returns (bool) {
         if (species == GRASS_TYPE) {
             uint32[] memory grassIds = grassOfOwner[to];
-            return num <= 10 && (totalGrass + num) <= GRASS_LIMIT && (grassIds.length + num) < GRASS_LIMIT_OF_OWNER;
+            return
+                num <= 10 &&
+                (totalGrass + num) <= GRASS_LIMIT &&
+                (grassIds.length + num) < GRASS_LIMIT_OF_OWNER;
         }
 
         if (species == SHEEP_TYPE) {
             uint32[] memory sheepIds = sheepOfOwner[to];
-            return num <= 10 && (totalSheep + num) <= SHEEP_LIMIT && (sheepIds.length + num) < SHEEP_LIMIT_OF_OWNER;
+            return
+                num <= 10 &&
+                (totalSheep + num) <= SHEEP_LIMIT &&
+                (sheepIds.length + num) < SHEEP_LIMIT_OF_OWNER;
         }
 
         if (species == WOLF_TYPE) {
             uint32[] memory wolfIds = wolfOfOwner[to];
-            return num <= 10 && (totalWolf + num) <= WOLF_LIMIT && (wolfIds.length + num) < WOLF_LIMIT_OF_OWNER;
+            return
+                num <= 10 &&
+                (totalWolf + num) <= WOLF_LIMIT &&
+                (wolfIds.length + num) < WOLF_LIMIT_OF_OWNER;
         }
         return false;
     }
@@ -402,7 +428,10 @@ contract Room {
         for (uint32 i = 0; i < grassIds.length; ++i) {
             uint32 grassId = grassIds[i];
             Grass storage grass = id2Grass[grassId];
-            uint256 grassValue = updateGrassValue(grass.value, grass.updateTime);
+            uint256 grassValue = updateGrassValue(
+                grass.value,
+                grass.updateTime
+            );
 
             //grass growing
             grass.value = grassValue;
@@ -411,7 +440,12 @@ contract Room {
         }
     }
 
-    function moveAndEat(int16 _x, int16 _y, uint32 id, uint8 species) internal returns (uint256) {
+    function moveAndEat(
+        int16 _x,
+        int16 _y,
+        uint32 id,
+        uint8 species
+    ) internal returns (uint256) {
         (int16 x, int16 y) = genCoordinate(_x, _y, id);
 
         uint256 value;
@@ -438,7 +472,10 @@ contract Room {
                 uint32 blood = updateBlood(sheep.blood, sheep.updateTime);
                 if (blood > 0) {
                     //羊被吃掉
-                    uint256 sheepValue = updateSheepValue(sheep.value, sheep.updateTime);
+                    uint256 sheepValue = updateSheepValue(
+                        sheep.value,
+                        sheep.updateTime
+                    );
                     newValue += convert2Wolf(sheepValue);
                 }
 
@@ -456,7 +493,10 @@ contract Room {
             for (uint32 i = 0; i < grassIds.length && i < EAT_LIMIT; ++i) {
                 uint32 grassId = grassIds[i];
                 Grass storage grass = id2Grass[grassId];
-                uint256 grassValue = updateGrassValue(grass.value, grass.updateTime);
+                uint256 grassValue = updateGrassValue(
+                    grass.value,
+                    grass.updateTime
+                );
                 newValue += convert2Sheep(grassValue);
 
                 //delete grass
@@ -610,21 +650,54 @@ contract Room {
         totalGrass -= 1;
     }
 
-    function born(uint8 species, int16 x, int16 y, address to, uint32 id, uint256 value) internal {
+    function born(
+        uint8 species,
+        int16 x,
+        int16 y,
+        address to,
+        uint32 id,
+        uint256 value
+    ) internal {
         if (species == GRASS_TYPE) {
-            Grass memory grass = Grass(x, y, to, id, uint32(block.timestamp), uint32(block.timestamp), value);
+            Grass memory grass = Grass(
+                x,
+                y,
+                to,
+                id,
+                uint32(block.timestamp),
+                uint32(block.timestamp),
+                value
+            );
             grassMap[x][y].push(id);
             grassOfOwner[to].push(id);
             id2Grass[id] = grass;
             aliveGrasses.push(id);
         } else if (species == SHEEP_TYPE) {
-            Sheep memory sheep = Sheep(x, y, to, id, 100, uint32(block.timestamp), uint32(block.timestamp), value);
+            Sheep memory sheep = Sheep(
+                x,
+                y,
+                to,
+                id,
+                100,
+                uint32(block.timestamp),
+                uint32(block.timestamp),
+                value
+            );
             sheepMap[x][y].push(id);
             sheepOfOwner[to].push(id);
             id2Sheep[id] = sheep;
             aliveSheeps.push(id);
         } else {
-            Wolf memory wolf = Wolf(x, y, to, id, 100, uint32(block.timestamp), uint32(block.timestamp), value);
+            Wolf memory wolf = Wolf(
+                x,
+                y,
+                to,
+                id,
+                100,
+                uint32(block.timestamp),
+                uint32(block.timestamp),
+                value
+            );
             wolfMap[x][y].push(id);
             wolfOfOwner[to].push(id);
             id2Wolf[id] = wolf;
@@ -632,37 +705,54 @@ contract Room {
         }
     }
 
-    function genCoordinate(int16 _x, int16 _y, uint32 id) internal returns (int8, int8) {
-        int256 seed = getRomdom();
-        int8 x = int8(seed);
-        int8 y = int8(seed >> 16);
+    function genCoordinate(
+        int16 _x,
+        int16 _y,
+        uint32 id
+    ) internal returns (int16, int16) {
+        uint256 seed = getRomdom();
+        int16 x =seed.toInt16();
+        int16 x = int16(seed);
+        int16 y = int16(seed >> 16);
         return (x, y);
     }
 
-    function getRomdom() internal returns (int256) {
-        return 0;
+    function getRomdom() internal returns (uint256) {
+        return block.prevrandao;
     }
 
-    function updateBlood(uint32 blood, uint32 operateTime) internal returns (uint32) {
+    function updateBlood(
+        uint32 blood,
+        uint32 operateTime
+    ) internal returns (uint32) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
         return blood > (diffTime / 100) ? (blood - (diffTime / 100)) : 0;
     }
 
-    function updateGrassValue(uint256 _value, uint32 operateTime) internal view returns (uint256) {
+    function updateGrassValue(
+        uint256 _value,
+        uint32 operateTime
+    ) internal view returns (uint256) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
-        uint256 value = _value + diffTime / 60;//convert to min
+        uint256 value = _value + diffTime / 60; //convert to min
         return value;
     }
 
-    function updateSheepValue(uint256 _value, uint32 operateTime) internal view returns (uint256) {
+    function updateSheepValue(
+        uint256 _value,
+        uint32 operateTime
+    ) internal view returns (uint256) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
-        uint256 value = _value + diffTime / 60;//convert to min
+        uint256 value = _value + diffTime / 60; //convert to min
         return value;
     }
 
-    function updateWolfValue(uint256 _value, uint32 operateTime) internal view returns (uint256) {
+    function updateWolfValue(
+        uint256 _value,
+        uint32 operateTime
+    ) internal view returns (uint256) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
-        uint256 value = _value + diffTime / 60;//convert to min
+        uint256 value = _value + diffTime / 60; //convert to min
         return value;
     }
 
@@ -678,12 +768,12 @@ contract Room {
 
     function convert2Sheep(uint256 grassValue) internal returns (uint256) {
         //fixme：小数取整问题
-        return grassValue * 80 / 100;
+        return (grassValue * 80) / 100;
     }
 
     function convert2Wolf(uint256 sheepValue) internal returns (uint256) {
         //fixme：小数取整问题
-        return sheepValue * 80 / 100;
+        return (sheepValue * 80) / 100;
     }
 
     function _getPrice(uint8 species) internal view returns (uint256) {
@@ -694,5 +784,78 @@ contract Room {
         } else {
             return wolfPrice;
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                Views
+    //////////////////////////////////////////////////////////////*/
+function getSpecieIdsAt(
+        uint8 species,
+        int16 x,
+        int16 y
+    ) external view returns (uint32[] memory) {
+        if (species == WOLF_TYPE) {
+            uint32[] memory wolfs = wolfMap[x][y];
+            return wolfs;
+        } else if (species == SHEEP_TYPE) {
+            uint32[] memory sheeps = sheepMap[x][y];
+            return sheeps;
+        } else {
+            uint32[] memory grasses = grassMap[x][y];
+            return grasses;
+        }
+    }
+
+    function getSpecieNumAt(
+        uint8 species,
+        int16 x,
+        int16 y
+    ) external view returns (uint32) {
+        if (species == WOLF_TYPE) {
+            return wolfMapNum[x][y];
+        } else if (species == SHEEP_TYPE) {
+            return sheepMapNum[x][y];
+        } else {
+            return grassMapNum[x][y];
+        }
+    }
+
+    function getOwnerOfSpecieIds(
+        uint8 species,
+        address user
+    ) external view returns (uint32[] memory) {
+        if (species == WOLF_TYPE) {
+            return wolfOfOwner[user];
+        } else if (species == SHEEP_TYPE) {
+            return sheepOfOwner[user];
+        } else {
+            return grassOfOwner[user];
+        }
+    }
+
+    function getOwnerOfSpecieNum(
+        uint8 species,
+        address user
+    ) external view returns (uint32) {
+        if (species == WOLF_TYPE) {
+            return wolfBalanceOfOwner[user];
+        } else if (species == SHEEP_TYPE) {
+            return sheepBalanceOfOwner[user];
+        } else {
+            return grassBalanceOfOwner[user];
+        }
+    }
+
+
+    function getWolf(uint32 id) external view returns (Wolf memory) {
+        return id2Wolf[id];
+    }
+
+    function getSheep(uint32 id) external view returns (Sheep memory) {
+        return id2Sheep[id];
+    }
+
+    function getGrass(uint32 id) external view returns (Grass memory) {
+        return id2Grass[id];
     }
 }
