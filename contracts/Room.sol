@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.17;
 
 import "./interfaces/IERC20.sol";
 import "forge-std/console2.sol";
@@ -345,7 +345,10 @@ contract Room {
             id += 1;
 
             //2. generate new coordinate
-            (int16 x, int16 y) = genCoordinate(-1, -1, id);
+            // (int16 x, int16 y) = genCoordinate(-1, -1, id);
+            (int16 x, int16 y) = genCoordinateMocked();
+            // console2.log("x", x);
+            // console2.log("y", y);
 
             //3. action on (x,y)
             action(x, y);
@@ -367,7 +370,7 @@ contract Room {
             return
                 num <= 10 &&
                 (totalGrass + num) <= GRASS_LIMIT &&
-                (grassIds.length + num) < GRASS_LIMIT_OF_OWNER;
+                (grassIds.length + num) <= GRASS_LIMIT_OF_OWNER;
         }
 
         if (species == SHEEP_TYPE) {
@@ -375,7 +378,7 @@ contract Room {
             return
                 num <= 10 &&
                 (totalSheep + num) <= SHEEP_LIMIT &&
-                (sheepIds.length + num) < SHEEP_LIMIT_OF_OWNER;
+                (sheepIds.length + num) <= SHEEP_LIMIT_OF_OWNER;
         }
 
         if (species == WOLF_TYPE) {
@@ -383,7 +386,7 @@ contract Room {
             return
                 num <= 10 &&
                 (totalWolf + num) <= WOLF_LIMIT &&
-                (wolfIds.length + num) < WOLF_LIMIT_OF_OWNER;
+                (wolfIds.length + num) <= WOLF_LIMIT_OF_OWNER;
         }
         return false;
     }
@@ -446,7 +449,8 @@ contract Room {
         uint32 id,
         uint8 species
     ) internal returns (uint256) {
-        (int16 x, int16 y) = genCoordinate(_x, _y, id);
+        // (int16 x, int16 y) = genCoordinate(_x, _y, id);
+        (int16 x, int16 y) = genCoordinateMocked(_x, _y);
 
         uint256 value;
         if (species == WOLF_TYPE) {
@@ -670,6 +674,7 @@ contract Room {
             );
             grassMap[x][y].push(id);
             grassOfOwner[to].push(id);
+            grassBalanceOfOwner[to] += 1;
             id2Grass[id] = grass;
             aliveGrasses.push(id);
         } else if (species == SHEEP_TYPE) {
@@ -685,6 +690,7 @@ contract Room {
             );
             sheepMap[x][y].push(id);
             sheepOfOwner[to].push(id);
+            sheepBalanceOfOwner[to] += 1;
             id2Sheep[id] = sheep;
             aliveSheeps.push(id);
         } else {
@@ -700,6 +706,7 @@ contract Room {
             );
             wolfMap[x][y].push(id);
             wolfOfOwner[to].push(id);
+            wolfBalanceOfOwner[to] += 1;
             id2Wolf[id] = wolf;
             aliveWolfs.push(id);
         }
@@ -711,14 +718,34 @@ contract Room {
         uint32 id
     ) internal returns (int16, int16) {
         uint256 seed = getRomdom();
-        int16 x =seed.toInt16();
-        int16 x = int16(seed);
-        int16 y = int16(seed >> 16);
-        return (x, y);
+        // int16 x =seed.toInt16();
+        // int16 x = int16(seed);
+        // int16 y = int16(seed >> 16);
+        return (_x, _y);
+    }
+
+    int16 mocked_x;
+    int16 mocked_y;
+    function genCoordinateMocked() internal returns (int16, int16) {
+        int16 _x = mocked_x % 5;
+        int16 _y = mocked_y % 5;
+        return (_x, _y);
+    } 
+
+    function genCoordinateMocked(int16 x, int16 y) internal returns (int16, int16) {
+        int16 _x = (mocked_x + x) % 5;
+        int16 _y = (mocked_y + y) % 5;
+        return (_x, _y);
+    } 
+
+    function setGenCoordinateMocked(int16 x, int16 y) external {
+        mocked_x = x;
+        mocked_y = y;
     }
 
     function getRomdom() internal returns (uint256) {
-        return block.prevrandao;
+        // return block.prevrandao;
+        return block.timestamp;
     }
 
     function updateBlood(
@@ -847,15 +874,18 @@ function getSpecieIdsAt(
     }
 
 
-    function getWolf(uint32 id) external view returns (Wolf memory) {
-        return id2Wolf[id];
+    function getWolf(uint32 id) external view returns (int16, int16, address, uint32, uint32, uint32, uint32, uint256) {
+        Wolf memory wolf = id2Wolf[id];
+        return (wolf.x, wolf.y, wolf.owner, wolf.id, wolf.blood, wolf.bornTime, wolf.updateTime, wolf.value);
     }
 
-    function getSheep(uint32 id) external view returns (Sheep memory) {
-        return id2Sheep[id];
+    function getSheep(uint32 id) external view returns (int16, int16, address, uint32, uint32, uint32, uint32, uint256) {
+        Sheep memory sheep = id2Sheep[id];
+        return (sheep.x, sheep.y, sheep.owner, sheep.id, sheep.blood, sheep.bornTime, sheep.updateTime, sheep.value);
     }
 
-    function getGrass(uint32 id) external view returns (Grass memory) {
-        return id2Grass[id];
+    function getGrass(uint32 id) external view returns (int16, int16, address, uint32, uint32, uint32, uint256) {
+        Grass memory grass = id2Grass[id];
+        return (grass.x, grass.y, grass.owner, grass.id, grass.bornTime, grass.updateTime, grass.value);
     }
 }
