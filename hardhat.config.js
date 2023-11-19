@@ -5,9 +5,9 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-foundry");
 require('@openzeppelin/hardhat-upgrades');
 
-require('dotenv').config();
+// require('dotenv').config();
 
-const { GOERLO_OP_API_URL, GOERLO_API_URL , PRIVATE_KEY } = process.env;
+// const { GOERLO_OP_API_URL, GOERLO_API_URL , PRIVATE_KEY } = process.env;
 
 
 
@@ -21,16 +21,16 @@ module.exports = {
   },
 
   networks: {
-    goerli_op : {
-      "url": GOERLO_OP_API_URL,
-      accounts: [`0x${PRIVATE_KEY}`],
-      // should set gasPrice, otherwise, ' transaction underpriced' occurs
-      gasPrice: 10000000000, 
-    },
-    goerli: {
-      "url": GOERLO_API_URL,
-      accounts: [`0x${PRIVATE_KEY}`] 
-    }
+    // goerli_op : {
+    //   "url": GOERLO_OP_API_URL,
+    //   accounts: [`0x${PRIVATE_KEY}`],
+    //   // should set gasPrice, otherwise, ' transaction underpriced' occurs
+    //   gasPrice: 10000000000, 
+    // },
+    // goerli: {
+    //   "url": GOERLO_API_URL,
+    //   accounts: [`0x${PRIVATE_KEY}`] 
+    // }
   },
   abiExporter: {
     path: './data/abi',
