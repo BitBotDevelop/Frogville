@@ -2,9 +2,9 @@
 pragma solidity ^0.8.17;
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/RoomInitializable.sol";
 import "forge-std/console2.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-
 
 //1. room factory  @john
 //2. tokenomics / emissions @john
@@ -124,13 +124,18 @@ contract Room {
     address public USDT;
     address public treasury;
 
-    constructor(
-        uint256 _wolfPrice,
-        uint256 _sheepPrice,
-        uint256 _grassPrice,
-        address _usdt,
-        address _treasury
-    ) {
+    error Initialized();
+
+    // constructor(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) {
+    //     wolfPrice = _wolfPrice;
+    //     sheepPrice = _sheepPrice;
+    //     grassPrice = _grassPrice;
+    //     USDT = _usdt;
+    //     treasury = _treasury;
+    // }
+
+    function initialize(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) public {
+        if (USDT != address(0)) revert Initialized();
         wolfPrice = _wolfPrice;
         sheepPrice = _sheepPrice;
         grassPrice = _grassPrice;
@@ -772,13 +777,13 @@ contract Room {
         int16 _x = mocked_x % 5;
         int16 _y = mocked_y % 5;
         return (_x, _y);
-    } 
+    }
 
     function genCoordinateMocked(int16 x, int16 y) internal returns (int16, int16) {
         int16 _x = (mocked_x + x) % 5;
         int16 _y = (mocked_y + y) % 5;
         return (_x, _y);
-    } 
+    }
 
     function setGenCoordinateMocked(int16 x, int16 y) external {
         mocked_x = x;
@@ -858,7 +863,7 @@ contract Room {
     /*//////////////////////////////////////////////////////////////
                                 Views
     //////////////////////////////////////////////////////////////*/
-function getSpecieIdsAt(
+    function getSpecieIdsAt(
         uint8 species,
         int16 x,
         int16 y
@@ -929,5 +934,9 @@ function getSpecieIdsAt(
     function getGrass(uint32 id) external view returns (int16, int16, address, uint32, uint32, uint32, uint256, uint256) {
         Grass memory grass = id2Grass[id];
         return (grass.x, grass.y, grass.owner, grass.id, grass.bornTime, grass.updateTime, grass.height, grass.value);
+    }
+
+    function encodeInitParam(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) public pure returns (bytes memory) {
+        return abi.encodeWithSelector(RoomInitializable.initialize.selector, _wolfPrice, _sheepPrice, _grassPrice, _usdt, _treasury);
     }
 }

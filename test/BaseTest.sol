@@ -10,7 +10,6 @@ import "../contracts/Wolf.sol";
 import "../contracts/Room.sol";
 
 abstract contract BaseTest is Test {
-    
     address public admin = address(9999);
     Wolf public WOLF_TOKEN;
     Room public room;
@@ -20,7 +19,9 @@ abstract contract BaseTest is Test {
     }
 
     function deployRoom() public {
-        room = new Room(1000, 100, 10, address(WOLF_TOKEN), address(0));
+        room = new Room();
+        room.initialize(1000, 100, 10, address(WOLF_TOKEN), address(0));
     }
+
     receive() external payable {}
 }

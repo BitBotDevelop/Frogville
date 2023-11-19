@@ -5,11 +5,9 @@ import "./BaseTest.sol";
 import "../contracts/interfaces/IERC20.sol";
 import "../contracts/Room.sol";
 
-
 contract RootTest is BaseTest {
-
     address public Alice = address(100);
-    address public Bob = address(101); 
+    address public Bob = address(101);
 
     uint32 public initBlockTime = 1682553600;
     function setUp() public {
@@ -23,7 +21,6 @@ contract RootTest is BaseTest {
 
     //forge test --match-test test_buy_grass -vvv
     function test_buy_grass() public {
-        
         vm.startPrank(admin);
         WOLF_TOKEN.mint(address(Alice), 100000);
         vm.stopPrank();
@@ -60,7 +57,6 @@ contract RootTest is BaseTest {
 
     //forge test --match-test test_buy_sheep -vvv
     function test_buy_sheep() public {
-        
         vm.startPrank(admin);
         WOLF_TOKEN.mint(address(Alice), 100000);
         vm.stopPrank();
@@ -97,7 +93,6 @@ contract RootTest is BaseTest {
 
     //forge test --match-test test_buy_wolf -vvv
     function test_buy_wolf() public {
-        
         vm.startPrank(admin);
         WOLF_TOKEN.mint(address(Alice), 100000);
         vm.stopPrank();
@@ -212,5 +207,4 @@ contract RootTest is BaseTest {
         console2.log("height %s", _height);
         console2.log("value %s", _value);
     }
-
 }
