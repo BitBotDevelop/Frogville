@@ -5,7 +5,6 @@ import "./interfaces/IERC20.sol";
 import "forge-std/console2.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-
 //1. room factory  @john
 //2. tokenomics / emissions @john
 //3. game @webber
@@ -124,13 +123,18 @@ contract Room {
     address public USDT;
     address public treasury;
 
-    constructor(
-        uint256 _wolfPrice,
-        uint256 _sheepPrice,
-        uint256 _grassPrice,
-        address _usdt,
-        address _treasury
-    ) {
+    error Initialized();
+
+    // constructor(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) {
+    //     wolfPrice = _wolfPrice;
+    //     sheepPrice = _sheepPrice;
+    //     grassPrice = _grassPrice;
+    //     USDT = _usdt;
+    //     treasury = _treasury;
+    // }
+
+    function initialize(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) public {
+        if (USDT != address(0)) revert Initialized();
         wolfPrice = _wolfPrice;
         sheepPrice = _sheepPrice;
         grassPrice = _grassPrice;
@@ -239,7 +243,6 @@ contract Room {
         int16[] memory loc_y = new int16[](10);
 
         uint256 totalValue;
-        console2.log("ids : %s", ids.length);
         for (uint32 i = 0; i < ids.length; ++i) {
             uint32 sheepId = ids[i];
             Sheep storage sheep = id2Sheep[sheepId];
@@ -268,16 +271,8 @@ contract Room {
             }
 
             totalValue += updateSheepValue(sheep.value, sheep.updateTime);
-            console2.log("sheepId : %s", sheepId);
             burnSheep(sheepId);
         }
-        uint32 grassNumAtMap = getSpecieNumAt(1, 1, 1);
-        // console2.log("grassNumAtMap %d", grassNumAtMap);
-
-        uint32[] memory sheepIds = getSpecieIdsAt(1, 1, 1);
-        // for (uint8 i=0; i<grassNumAtMap; ++i) {
-        //     console2.log("sheepIds[%s] %s", i , sheepIds[i]);
-        // }
 
         // 推送地图变化
         for (uint8 i = 0; i < size; ++i) {
@@ -407,8 +402,9 @@ contract Room {
 
     function action(int16 _x, int16 _y) internal {
         //1. wolf
+        uint32 wolfNum = wolfMapNum[_x][_y];
         uint32[] storage wolfIds = wolfMap[_x][_y];
-        for (uint32 i = 0; i < wolfIds.length; ++i) {
+        for (uint32 i = 0; i < wolfNum; ++i) {
             uint32 wolfId = wolfIds[i];
             Wolf storage wolf = id2Wolf[wolfId];
             if (wolf.height == block.number) {
@@ -429,8 +425,9 @@ contract Room {
         }
 
         //2. sheep
+        uint32 sheepNum = sheepMapNum[_x][_y];
         uint32[] storage sheepIds = sheepMap[_x][_y];
-        for (uint32 i = 0; i < sheepIds.length; ++i) {
+        for (uint32 i = 0; i < sheepNum; ++i) {
             uint32 sheepId = sheepIds[i];
             Sheep storage sheep = id2Sheep[sheepId];
             if (sheep.height == block.number) {
@@ -451,8 +448,9 @@ contract Room {
         }
 
         //3. grass
+        uint32 grassNum = grassMapNum[_x][_y];
         uint32[] storage grassIds = grassMap[_x][_y];
-        for (uint32 i = 0; i < grassIds.length; ++i) {
+        for (uint32 i = 0; i < grassNum; ++i) {
             uint32 grassId = grassIds[i];
             Grass storage grass = id2Grass[grassId];
             if (grass.height == block.number) {
@@ -662,7 +660,6 @@ contract Room {
         uint32[] storage grassIds = grassMap[x][y];
         for (uint32 i = 0; i < num; ++i) {
             if (grassIds[i] == id) {
-                // console2.log("grassIds[num-1] %s", grassIds[num-1]);
                 grassIds[i] = grassIds[num - 1];
                 grassMapNum[x][y] -= 1;
                 break;
@@ -772,13 +769,13 @@ contract Room {
         int16 _x = mocked_x % 5;
         int16 _y = mocked_y % 5;
         return (_x, _y);
-    } 
+    }
 
     function genCoordinateMocked(int16 x, int16 y) internal returns (int16, int16) {
         int16 _x = (mocked_x + x) % 5;
         int16 _y = (mocked_y + y) % 5;
         return (_x, _y);
-    } 
+    }
 
     function setGenCoordinateMocked(int16 x, int16 y) external {
         mocked_x = x;
@@ -795,7 +792,7 @@ contract Room {
         uint32 operateTime
     ) internal returns (uint32) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
-        return blood > (diffTime / 100) ? (blood - (diffTime / 100)) : 0;
+        return blood > (diffTime / 1 minutes) ? (blood - (diffTime / 1 minutes)) : 0;
     }
 
     function updateGrassValue(
@@ -858,7 +855,7 @@ contract Room {
     /*//////////////////////////////////////////////////////////////
                                 Views
     //////////////////////////////////////////////////////////////*/
-function getSpecieIdsAt(
+    function getSpecieIdsAt(
         uint8 species,
         int16 x,
         int16 y
