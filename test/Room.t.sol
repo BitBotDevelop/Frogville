@@ -10,6 +10,7 @@ contract RootTest is BaseTest {
     address public Bob = address(101);
 
     uint32 public initBlockTime = 1682553600;
+
     function setUp() public {
         vm.label(address(Alice), "Alice");
         vm.label(address(Bob), "Bob");
@@ -20,9 +21,6 @@ contract RootTest is BaseTest {
 
         vm.startPrank(admin);
         WOLF_TOKEN.mint(address(Alice), 100000);
-        vm.stopPrank();
-
-        vm.startPrank(admin);
         WOLF_TOKEN.mint(address(Bob), 100000);
         vm.stopPrank();
     }
@@ -208,5 +206,4 @@ contract RootTest is BaseTest {
         room.sell(1, ids, address(Bob));
         vm.stopPrank();
     }
-
 }

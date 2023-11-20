@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "./interfaces/IERC20.sol";
+import "./interfaces/RoomInitializable.sol";
 import "forge-std/console2.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
@@ -926,5 +927,9 @@ contract Room {
     function getGrass(uint32 id) external view returns (int16, int16, address, uint32, uint32, uint32, uint256, uint256) {
         Grass memory grass = id2Grass[id];
         return (grass.x, grass.y, grass.owner, grass.id, grass.bornTime, grass.updateTime, grass.height, grass.value);
+    }
+
+    function encodeInitParam(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) public pure returns (bytes memory) {
+        return abi.encodeWithSelector(RoomInitializable.initialize.selector, _wolfPrice, _sheepPrice, _grassPrice, _usdt, _treasury);
     }
 }
