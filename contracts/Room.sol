@@ -397,8 +397,10 @@ contract Room {
         return false;
     }
 
-    function action(int16 _x, int16 _y) internal {
-        //1. wolf
+    function _actionForWolf(int16 _x, int16 _y) internal returns(uint256, uint256) {
+        uint256 addPoolTotal;
+        uint256 addTeamTotal;
+
         uint32 wolfNum = wolfMapNum[_x][_y];
         uint32[] storage wolfIds = wolfMap[_x][_y];
         for (uint32 i = 0; i < wolfNum; ++i) {
@@ -407,21 +409,29 @@ contract Room {
             if (wolf.height == block.number) {
                 continue;
             }
-            uint32 blood = updateBlood(wolf.blood, wolf.updateTime);
+            uint32 blood = reduceBlood(WOLF_TYPE, wolf.blood, wolf.updateTime);
             if (blood > 0) {
                 // move
-                uint256 value = moveAndEat(_x, _y, wolfId, WOLF_TYPE);
+                (uint256 value, uint256 forPool, uint256 forTeam) = moveAndEat(_x, _y, wolfId, WOLF_TYPE);
                 wolf.value += value;
                 wolf.blood = blood;
                 wolf.updateTime = uint32(block.timestamp);
                 wolf.height = block.number;
+
+                addPoolTotal += forPool;
+                addTeamTotal += forTeam;
             } else {
                 burnWolf(wolfId);
                 //emit event
             }
         }
+        return (addPoolTotal, addTeamTotal);
+    }
 
-        //2. sheep
+    function _actionForSheep(int16 _x, int16 _y) internal returns(uint256, uint256) {
+        uint256 addPoolTotal;
+        uint256 addTeamTotal;
+
         uint32 sheepNum = sheepMapNum[_x][_y];
         uint32[] storage sheepIds = sheepMap[_x][_y];
         for (uint32 i = 0; i < sheepNum; ++i) {
@@ -430,21 +440,28 @@ contract Room {
             if (sheep.height == block.number) {
                 continue;
             }
-            uint32 blood = updateBlood(sheep.blood, sheep.updateTime);
+            uint32 blood = reduceBlood(SHEEP_TYPE, sheep.blood, sheep.updateTime);
             if (blood > 0) {
                 // move
-                uint256 value = moveAndEat(_x, _y, sheepId, SHEEP_TYPE);
+                (uint256 value, uint256 forPool, uint256 forTeam) = moveAndEat(_x, _y, sheepId, SHEEP_TYPE);
                 sheep.value += value;
                 sheep.blood = blood;
                 sheep.updateTime = uint32(block.timestamp);
                 sheep.height = block.number;
+
+                addPoolTotal += forPool;
+                addTeamTotal += forTeam;
             } else {
                 burnSheep(sheepId);
                 //emit event
             }
         }
+        return (addPoolTotal, addTeamTotal);
+    }
 
-        //3. grass
+    function _actionForGrass(int16 _x, int16 _y) internal returns(uint256) {
+        uint256 substractPoolTotal;
+
         uint32 grassNum = grassMapNum[_x][_y];
         uint32[] storage grassIds = grassMap[_x][_y];
         for (uint32 i = 0; i < grassNum; ++i) {
@@ -462,8 +479,31 @@ contract Room {
             grass.value = grassValue;
             grass.updateTime = uint32(block.timestamp);
             grass.height = block.number;
+
+            substractPoolTotal += grassValue;
             //emit event;
         }
+        return substractPoolTotal;
+    }
+
+    function action(int16 _x, int16 _y) internal returns (uint256, uint256, uint256) {
+        
+        uint256 addPoolTotal;
+        uint256 addTeamTotal;
+        
+        //1. wolf
+        (uint256 _addPoolTotal, uint256 _addTeamTotal) = _actionForWolf(_x, _y);
+        addPoolTotal += _addPoolTotal;
+        addTeamTotal += _addTeamTotal;
+
+        //2. sheep
+        (_addPoolTotal, _addTeamTotal) = _actionForSheep(_x, _y);
+        addPoolTotal += _addPoolTotal;
+        addTeamTotal += _addTeamTotal;
+
+        //3. grass
+        uint256 substractPoolTotal = _actionForGrass(_x, _y);
+        return (addPoolTotal, addTeamTotal, substractPoolTotal);
     }
 
     function moveAndEat(
@@ -471,53 +511,73 @@ contract Room {
         int16 _y,
         uint32 id,
         uint8 species
-    ) internal returns (uint256) {
+    ) internal returns (uint256, uint256, uint256) {
         // (int16 x, int16 y) = genCoordinate(_x, _y, id);
         (int16 x, int16 y) = genCoordinateMocked(_x, _y);
 
-        uint256 value;
         if (species == WOLF_TYPE) {
+
             wolfMove(id, x, y);
-            value = eat(x, y, SHEEP_TYPE);
-        } else if (species == SHEEP_TYPE) {
+            return eat(x, y, SHEEP_TYPE);
+
+        } else {
+
             sheepMove(id, x, y);
-            value = eat(x, y, GRASS_TYPE);
+            return eat(x, y, GRASS_TYPE);
         }
-        return value;
     }
 
-    function eat(int16 x, int16 y, uint8 species) internal returns (uint256) {
+    function eat(int16 x, int16 y, uint8 species) internal returns (uint256, uint256, uint256) {
         //1.结算新坐标(x,y)上的生物
         if (species == SHEEP_TYPE) {
             //eat sheep
             uint32 sheepNum = sheepMapNum[x][y];
             uint32[] memory sheepIds = sheepMap[x][y];
             uint256 newValue;
+            uint256 forPoolValue;
+            uint256 forTeamValue;
+
             //1次最多吃3只羊
             for (uint32 i = 0; i < sheepNum && i < EAT_LIMIT; ++i) {
                 uint32 sheepId = sheepIds[i];
                 Sheep storage sheep = id2Sheep[sheepId];
-                uint32 blood = updateBlood(sheep.blood, sheep.updateTime);
-                if (blood > 0) {
-                    //羊被吃掉
-                    uint256 sheepValue = updateSheepValue(
-                        sheep.value,
-                        sheep.updateTime
-                    );
-                    newValue += convert2Wolf(sheepValue);
-                }
+                uint32 blood = reduceBlood(SHEEP_TYPE, sheep.blood, sheep.updateTime);
+                if (blood > 20) {
+                    //羊被吃一口
+                    (uint256 _value, uint256 _forPool, uint256 _forTeam) = convert2Wolf(blood);
+                    newValue += _value;
+                    forPoolValue += _forPool;
+                    forTeamValue += _forTeam;
 
-                // delete sheep
-                burnSheep(sheepId);
-                //emit event
+                    sheep.value -= _value;
+                    sheep.height = block.number;
+                    sheep.updateTime = uint32(block.timestamp);
+
+                } else if (blood > 0) {
+                    //羊被咬死
+                    (uint256 _value, uint256 _forPool, uint256 _forTeam) = convert2Wolf(blood);
+                    newValue += _value;
+                    forPoolValue += _forPool;
+                    forTeamValue += _forTeam;
+
+                    burnSheep(sheepId);                    
+                
+                } else {
+                    //羊自然死亡
+                    // delete sheep
+                    burnSheep(sheepId);
+                    //emit event
+                }
             }
-            return newValue;
+            return (newValue, forPoolValue, forTeamValue);
         }
 
         if (species == GRASS_TYPE) {
             uint32 grassNum = grassMapNum[x][y];
             uint32[] memory grassIds = grassMap[x][y];
             uint256 newValue;
+            uint256 forPoolValue;
+            uint256 forTeamValue;
             //最多吃3颗草
             for (uint32 i = 0; i < grassNum && i < EAT_LIMIT; ++i) {
                 uint32 grassId = grassIds[i];
@@ -526,13 +586,17 @@ contract Room {
                     grass.value,
                     grass.updateTime
                 );
-                newValue += convert2Sheep(grassValue);
+
+                (uint256 _value, uint256 _forPool, uint256 _forTeam) = convert2Sheep(grassValue);
+                newValue += _value;
+                forPoolValue += _forPool;
+                forTeamValue += _forTeam;
 
                 //delete grass
                 burnGrass(grassId);
                 //emit event;
             }
-            return newValue;
+            return (newValue, forPoolValue, forTeamValue);
         }
         revert("wrong species.");
     }
@@ -786,12 +850,19 @@ contract Room {
         return block.timestamp;
     }
 
-    function updateBlood(
+    function reduceBlood(
+        uint8 species,
         uint32 blood,
         uint32 operateTime
     ) internal returns (uint32) {
-        uint32 diffTime = uint32(block.timestamp) - operateTime;
-        return blood > (diffTime / 1 minutes) ? (blood - (diffTime / 1 minutes)) : 0;
+        uint32 diffTime = (uint32(block.timestamp) - operateTime) / 1 hours;
+        uint32 reducedBlood;
+        if (species == WOLF_TYPE) {
+            reducedBlood = diffTime * 5;
+        } else if (species == SHEEP_TYPE) {
+            reducedBlood = diffTime * 2;
+        }
+        return blood > (reducedBlood) ? (blood - reducedBlood) : 0;
     }
 
     function updateGrassValue(
@@ -799,7 +870,7 @@ contract Room {
         uint32 operateTime
     ) internal view returns (uint256) {
         uint32 diffTime = uint32(block.timestamp) - operateTime;
-        uint256 value = _value + diffTime / 1 minutes; //convert to min
+        uint256 value = _value + diffTime / 1 hours; //convert to min
         return value;
     }
 
@@ -831,14 +902,21 @@ contract Room {
         }
     }
 
-    function convert2Sheep(uint256 grassValue) internal returns (uint256) {
-        //fixme：小数取整问题
-        return (grassValue * 80) / 100;
+    function convert2Sheep(uint256 grassValue) internal pure returns (uint256, uint256, uint256) {
+        _convert(grassValue);
     }
 
-    function convert2Wolf(uint256 sheepValue) internal returns (uint256) {
-        //fixme：小数取整问题
-        return (sheepValue * 80) / 100;
+    function convert2Wolf(uint256 sheepValue) internal pure returns (uint256, uint256, uint256) {
+        uint256 _validValue = sheepValue >= 20 ? 20 : sheepValue;
+        return _convert(_validValue);
+    }
+
+    function _convert(uint256 value) internal pure returns (uint256, uint256, uint256) {
+        uint256 forConvert = value * 60 / 100;
+        uint256 forPool = value * 20 / 100;
+        uint256 forTeam = value - forConvert - forPool;
+
+        return (forConvert, forPool, forTeam);
     }
 
     function _getPrice(uint8 species) internal view returns (uint256) {
