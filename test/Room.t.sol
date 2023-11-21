@@ -30,13 +30,10 @@ contract RootTest is BaseTest {
         room.setGenCoordinateMocked(2, 2);
 
         vm.roll(1);
-        vm.startPrank(address(Alice));
-        WOLF_TOKEN.approve(address(room), 100000);
-        room.buy(0, 5);
-        vm.stopPrank();
+        buy_grass(address(Alice));
 
         uint32 grassNum = room.getOwnerOfSpecieNum(0, address(Alice));
-        console.log("grassNum %d", grassNum);
+        // console.log("grassNum %d", grassNum);
         assertEq(grassNum, 5);
         
         uint32[] memory grasses = room.getSpecieIdsAt(0, 2, 2);
@@ -60,14 +57,10 @@ contract RootTest is BaseTest {
     //forge test --match-test test_buy_sheep -vvv
     function test_buy_sheep() public {
         room.setGenCoordinateMocked(1, 1);
-
-        vm.startPrank(address(Alice));
-        WOLF_TOKEN.approve(address(room), 100000);
-        room.buy(1, 5);
-        vm.stopPrank();
+        buy_sheep(address(Alice));
 
         uint32 sheepNum = room.getOwnerOfSpecieNum(1, address(Alice));
-        console.log("sheepNum %d", sheepNum);
+        // console.log("sheepNum %d", sheepNum);
         assertEq(sheepNum, 5);
 
         uint32[] memory sheeps = room.getSpecieIdsAt(1, 1, 1);
@@ -79,10 +72,7 @@ contract RootTest is BaseTest {
     function test_buy_wolf() public {
         room.setGenCoordinateMocked(1, 1);
 
-        vm.startPrank(address(Alice));
-        WOLF_TOKEN.approve(address(room), 100000);
-        room.buy(2, 2);
-        vm.stopPrank();
+        buy_wolf(address(Alice));
 
         uint32 wolfNum = room.getOwnerOfSpecieNum(2, address(Alice));
         console.log("wolfNum %d", wolfNum);
@@ -107,17 +97,16 @@ contract RootTest is BaseTest {
 
     //forge test --match-test test_buy_and_sell_grass -vvv
     function test_buy_and_sell_grass() public {
-        test_buy_grass();
+        // test_buy_grass();
+        room.setGenCoordinateMocked(2, 2);
+        buy_grass(address(Alice));
 
         console2.log(" =========== sell =========");
         vm.warp(initBlockTime + 10 minutes);
 
         uint32[] memory ids = new uint32[](1);
         ids[0] = 2;
-
-        vm.startPrank(address(Alice));
-        room.sell(0, ids, address(Alice));
-        vm.stopPrank();
+        sell_grass(address(Alice), ids);
 
         uint32 grassNum = room.getOwnerOfSpecieNum(0, address(Alice));
         // console.log("grassNum %d", grassNum);
@@ -148,7 +137,8 @@ contract RootTest is BaseTest {
 
     //forge test --match-test test_buy_and_sell_sheep -vvv
     function test_buy_and_sell_sheep() public {
-        test_buy_sheep();
+        room.setGenCoordinateMocked(1, 1);
+        buy_sheep(address(Alice));
 
         console2.log(" =========== sell =========");
         vm.roll(2);
@@ -156,13 +146,10 @@ contract RootTest is BaseTest {
 
         uint32[] memory ids = new uint32[](1);
         ids[0] = 3;
-
-        vm.startPrank(address(Alice));
-        room.sell(1, ids, address(Alice));
-        vm.stopPrank();
+        sell_sheep(address(Alice), ids);
 
         uint32 sheepNum = room.getOwnerOfSpecieNum(1, address(Alice));
-        console.log("sheepNum %d", sheepNum);
+        // console.log("sheepNum %d", sheepNum);
         assertEq(sheepNum, 4);
 
         uint32 sheepNumAtMap = room.getSpecieNumAt(1, 1, 1);
@@ -180,19 +167,16 @@ contract RootTest is BaseTest {
 
     //forge test --match-test test_eat_grass -vvv
     function test_eat_grass() public {
-        test_buy_grass();// (2,2)
+        room.setGenCoordinateMocked(2, 2);
+        buy_grass(address(Alice));
 
         // console2.log(" =========== Bob buy sheep =========");
         vm.roll(2);
         vm.warp(initBlockTime + 10 minutes);
-        
         room.setGenCoordinateMocked(1, 1);
 
         // buy sheep
-        vm.startPrank(address(Bob));
-        WOLF_TOKEN.approve(address(room), 100000);
-        room.buy(1, 5);
-        vm.stopPrank();
+        buy_sheep(address(Bob));
 
         console2.log(" =========== Bob sell sheep =========");
         vm.roll(3);
@@ -201,10 +185,7 @@ contract RootTest is BaseTest {
 
         uint32[] memory ids = new uint32[](1);
         ids[0] = 3;
-        vm.startPrank(address(Bob));
-        WOLF_TOKEN.approve(address(room), 100000);
-        room.sell(1, ids, address(Bob));
-        vm.stopPrank();
+        sell_sheep(address(Bob), ids);
 
         uint32 totalSheep = room.totalSheep();
         assertEq(4, totalSheep);
@@ -221,5 +202,93 @@ contract RootTest is BaseTest {
         uint32 grassNumAtMap = room.getSpecieNumAt(0, 2, 2);
         assertEq(grassNumAtMap, 0);
 
+    }
+
+
+    //forge test --match-test test_eat_sheep -vvv
+    function test_eat_sheep() public {
+        vm.roll(1);
+        vm.warp(initBlockTime);
+
+        room.setGenCoordinateMocked(1, 1);
+        buy_grass(address(Alice));
+
+        vm.roll(2);
+        vm.warp(initBlockTime + 10 minutes);
+        room.setGenCoordinateMocked(2, 2);
+        buy_grass(address(Alice));
+
+        room.setGenCoordinateMocked(1, 1);
+        buy_wolf(address(Bob));
+
+        console2.log(" =========== Bob sell wolf =========");
+        vm.roll(3);
+        vm.warp(initBlockTime + 20 minutes);
+
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = 1;
+        sell_wolf(address(Bob), ids);
+
+        uint32 totalSheep = room.totalSheep();
+        assertEq(0, totalSheep);
+
+        uint32 sheepNum = room.getOwnerOfSpecieNum(1, address(Alice));
+        assertEq(0, sheepNum);
+
+        uint32 wolfNumOfOwner = room.getOwnerOfSpecieNum(2, address(Bob));
+        assertEq(1, wolfNumOfOwner);
+
+        uint32 wolfNumAtMap = room.getSpecieNumAt(2, 1, 1);
+        assertEq(wolfNumAtMap, 0);
+
+        wolfNumAtMap = room.getSpecieNumAt(2, 2, 2);
+        assertEq(wolfNumAtMap, 1);
+
+        uint32 grassNumAtMap = room.getSpecieNumAt(0, 1, 1);
+        assertEq(grassNumAtMap, 5);
+
+        uint32 sheepNumAtMap = room.getSpecieNumAt(1, 2, 2);
+        assertEq(sheepNumAtMap, 0);
+    }
+
+    function buy_grass(address user) internal {
+        vm.startPrank(address(user));
+        WOLF_TOKEN.approve(address(room), 100000);
+        room.buy(0, 5);
+        vm.stopPrank();
+    }
+
+
+    function sell_grass(address user, uint32[] memory ids) internal {
+        vm.startPrank(address(user));
+        room.sell(0, ids, address(user));
+        vm.stopPrank();
+    }
+
+    function buy_sheep(address user) internal {
+        vm.startPrank(address(user));
+        WOLF_TOKEN.approve(address(room), 100000);
+        room.buy(1, 5);
+        vm.stopPrank();
+    }
+
+
+    function sell_sheep(address user, uint32[] memory ids) internal {
+        vm.startPrank(address(user));
+        room.sell(1, ids, address(user));
+        vm.stopPrank();
+    }
+
+    function buy_wolf(address user) internal {
+        vm.startPrank(address(user));
+        WOLF_TOKEN.approve(address(room), 100000);
+        room.buy(2, 2);
+        vm.stopPrank();
+    }
+
+    function sell_wolf(address user, uint32[] memory ids) internal {
+        vm.startPrank(address(user));
+        room.sell(2, ids, address(user));
+        vm.stopPrank();
     }
 }
