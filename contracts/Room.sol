@@ -490,10 +490,11 @@ contract Room {
         //1.结算新坐标(x,y)上的生物
         if (species == SHEEP_TYPE) {
             //eat sheep
-            uint32[] storage sheepIds = sheepMap[x][y];
+            uint32 sheepNum = sheepMapNum[x][y];
+            uint32[] memory sheepIds = sheepMap[x][y];
             uint256 newValue;
             //1次最多吃3只羊
-            for (uint32 i = 0; i < sheepIds.length && i < EAT_LIMIT; ++i) {
+            for (uint32 i = 0; i < sheepNum && i < EAT_LIMIT; ++i) {
                 uint32 sheepId = sheepIds[i];
                 Sheep storage sheep = id2Sheep[sheepId];
                 uint32 blood = updateBlood(sheep.blood, sheep.updateTime);
@@ -514,10 +515,11 @@ contract Room {
         }
 
         if (species == GRASS_TYPE) {
-            uint32[] storage grassIds = grassMap[x][y];
+            uint32 grassNum = grassMapNum[x][y];
+            uint32[] memory grassIds = grassMap[x][y];
             uint256 newValue;
             //最多吃3颗草
-            for (uint32 i = 0; i < grassIds.length && i < EAT_LIMIT; ++i) {
+            for (uint32 i = 0; i < grassNum && i < EAT_LIMIT; ++i) {
                 uint32 grassId = grassIds[i];
                 Grass storage grass = id2Grass[grassId];
                 uint256 grassValue = updateGrassValue(

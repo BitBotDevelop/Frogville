@@ -46,15 +46,15 @@ contract RootTest is BaseTest {
         //     console2.log("grasses[%s] %d", i, grasses[i]);
         // }
 
-        (int16 _x, int16 _y, address _owner, uint32 _id, uint32 _bornTime, uint32 _updateTime, uint256 _height ,uint256 _value) = room.getGrass(2);
-        console2.log("x %s", _x);
-        console2.log("y %s", _y);
-        console2.log("address %s", _owner);
-        console2.log("id %s", _id);
-        console2.log("bornTime %s", _bornTime);
-        console2.log("updateTime %s", _updateTime);
-        console2.log("_height %s", _height);
-        console2.log("value %s", _value);
+        // (int16 _x, int16 _y, address _owner, uint32 _id, uint32 _bornTime, uint32 _updateTime, uint256 _height ,uint256 _value) = room.getGrass(2);
+        // console2.log("x %s", _x);
+        // console2.log("y %s", _y);
+        // console2.log("address %s", _owner);
+        // console2.log("id %s", _id);
+        // console2.log("bornTime %s", _bornTime);
+        // console2.log("updateTime %s", _updateTime);
+        // console2.log("_height %s", _height);
+        // console2.log("value %s", _value);
     }
 
     //forge test --match-test test_buy_sheep -vvv
@@ -205,5 +205,21 @@ contract RootTest is BaseTest {
         WOLF_TOKEN.approve(address(room), 100000);
         room.sell(1, ids, address(Bob));
         vm.stopPrank();
+
+        uint32 totalSheep = room.totalSheep();
+        assertEq(4, totalSheep);
+
+        uint32 sheepNumOfOwner = room.getOwnerOfSpecieNum(1, address(Bob));
+        assertEq(4, sheepNumOfOwner);
+
+        uint32 sheepNumAtMap = room.getSpecieNumAt(1, 1, 1);
+        assertEq(sheepNumAtMap, 0);
+
+        sheepNumAtMap = room.getSpecieNumAt(1, 2, 2);
+        assertEq(sheepNumAtMap, 4);
+
+        uint32 grassNumAtMap = room.getSpecieNumAt(0, 2, 2);
+        assertEq(grassNumAtMap, 0);
+
     }
 }
