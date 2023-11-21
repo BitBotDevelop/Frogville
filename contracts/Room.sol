@@ -348,10 +348,6 @@ contract Room {
             totalWolf += num;
         }
 
-        uint8 size = 0;
-        int16[] memory loc_x = new int16[](10);
-        int16[] memory loc_y = new int16[](10);
-
         for (uint32 i = 0; i < num; i++) {
             //1.mint
             id += 1;
@@ -619,7 +615,7 @@ contract Room {
         wolf.updateTime = 0;
         wolf.value = 0;
 
-        totalGrass -= 1;
+        totalWolf -= 1;
     }
 
     function burnSheep(uint32 id) internal {

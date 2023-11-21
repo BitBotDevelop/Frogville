@@ -180,7 +180,7 @@ contract RootTest is BaseTest {
 
     //forge test --match-test test_eat_grass -vvv
     function test_eat_grass() public {
-        test_buy_grass();// (1,1)
+        test_buy_grass();// (2,2)
 
         // console2.log(" =========== Bob buy sheep =========");
         vm.roll(2);
