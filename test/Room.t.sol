@@ -170,6 +170,13 @@ contract RootTest is BaseTest {
         room.setGenCoordinateMocked(2, 2);
         buy_grass(address(Alice));
 
+        // uint32 grassNumAtMap1 = room.getSpecieNumAt(0, 2, 2);
+        // uint32[] memory grasses1 = room.getSpecieIdsAt(0, 2, 2);
+        // for (uint8 i=0; i < grassNumAtMap1; i++) {
+        //     (int16 x, int16 y, address owner, uint32 grassId, uint32 bt, uint32 ut, uint256 height, uint256 value) = room.getGrass(grasses1[i]);
+        //     console2.log("grass id %s", grassId);
+        // }
+
         // console2.log(" =========== Bob buy sheep =========");
         vm.roll(2);
         vm.warp(initBlockTime + 10 minutes);
@@ -213,10 +220,24 @@ contract RootTest is BaseTest {
         room.setGenCoordinateMocked(1, 1);
         buy_grass(address(Alice));
 
+        uint32 grassNumAtMap1 = room.getSpecieNumAt(0, 1, 1);
+        uint32[] memory grasses1 = room.getSpecieIdsAt(0, 1, 1);
+        for (uint8 i=0; i < grassNumAtMap1; i++) {
+            (int16 x, int16 y, address owner, uint32 grassId, uint32 bt, uint32 ut, uint256 height, uint256 value) = room.getGrass(grasses1[i]);
+            console2.log("grass id %s", grassId);
+        }
+
         vm.roll(2);
         vm.warp(initBlockTime + 10 minutes);
         room.setGenCoordinateMocked(2, 2);
-        buy_grass(address(Alice));
+        buy_sheep(address(Alice));
+
+        uint32 sheepNumAtMap1 = room.getSpecieNumAt(1, 2, 2);
+        uint32[] memory sheep1 = room.getSpecieIdsAt(1, 2, 2);
+        for (uint8 i=0; i < sheepNumAtMap1; i++) {
+            (int16 x, int16 y, address owner, uint32 sheepId, uint32 bt, uint32 ut, uint32 _blood ,uint256 height, uint256 value) = room.getSheep(sheep1[i]);
+            console2.log("sheepId id %s", sheepId);
+        }
 
         room.setGenCoordinateMocked(1, 1);
         buy_wolf(address(Bob));
