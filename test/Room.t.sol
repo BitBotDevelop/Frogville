@@ -242,6 +242,13 @@ contract RootTest is BaseTest {
         room.setGenCoordinateMocked(1, 1);
         buy_wolf(address(Bob));
 
+        uint32 wolfNumAtMap1 = room.getSpecieNumAt(2, 1, 1);
+        uint32[] memory wolf1 = room.getSpecieIdsAt(1, 2, 2);
+        for (uint8 i=0; i < wolfNumAtMap1; i++) {
+            (int16 x, int16 y, address owner, uint32 wolfId, uint32 bt, uint32 ut, uint32 _blood ,uint256 height, uint256 value) = room.getWolf(wolf1[i]);
+            console2.log("wolfId id %s", wolfId);
+        }
+
         console2.log(" =========== Bob sell wolf =========");
         vm.roll(3);
         vm.warp(initBlockTime + 20 minutes);
@@ -250,27 +257,44 @@ contract RootTest is BaseTest {
         ids[0] = 1;
         sell_wolf(address(Bob), ids);
 
-        uint32 totalSheep = room.totalSheep();
-        assertEq(0, totalSheep);
-
-        uint32 sheepNum = room.getOwnerOfSpecieNum(1, address(Alice));
-        assertEq(0, sheepNum);
-
-        uint32 wolfNumOfOwner = room.getOwnerOfSpecieNum(2, address(Bob));
-        assertEq(1, wolfNumOfOwner);
-
         uint32 wolfNumAtMap = room.getSpecieNumAt(2, 1, 1);
         assertEq(wolfNumAtMap, 0);
 
         wolfNumAtMap = room.getSpecieNumAt(2, 2, 2);
         assertEq(wolfNumAtMap, 1);
 
+        uint32 totalSheep = room.totalSheep();
+        assertEq(5, totalSheep);
+
+        uint32 sheepNum = room.getOwnerOfSpecieNum(1, address(Alice));
+        assertEq(5, sheepNum);
+
+        uint32 wolfNumOfOwner = room.getOwnerOfSpecieNum(2, address(Bob));
+        assertEq(1, wolfNumOfOwner);
+
         uint32 grassNumAtMap = room.getSpecieNumAt(0, 1, 1);
         assertEq(grassNumAtMap, 5);
 
         uint32 sheepNumAtMap = room.getSpecieNumAt(1, 2, 2);
-        assertEq(sheepNumAtMap, 0);
+        assertEq(sheepNumAtMap, 5);
     }
+
+    //forge test --match-test test_lighting -vvv
+    function test_lighting() public {
+
+        room.setGenCoordinateMocked(1, 1);
+        buy_wolf(address(Alice));
+        buy_wolf(address(Bob));
+        
+        uint32 totalWolfs = room.totalWolf();
+        assertEq(totalWolfs, 4);
+
+        room.lightning_external();
+        totalWolfs = room.totalWolf();
+        // console2.log("totalWolfs ", totalWolfs);
+        assertEq(totalWolfs, 0);
+    }
+
 
     function buy_grass(address user) internal {
         vm.startPrank(address(user));
@@ -312,4 +336,5 @@ contract RootTest is BaseTest {
         room.sell(2, ids, address(user));
         vm.stopPrank();
     }
+
 }
