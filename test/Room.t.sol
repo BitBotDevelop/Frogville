@@ -8,6 +8,7 @@ import "../contracts/Room.sol";
 contract RootTest is BaseTest {
     address public Alice = address(100);
     address public Bob = address(101);
+    address public Chris = address(102);
 
     uint32 public initBlockTime = 1682553600;
 
@@ -22,6 +23,7 @@ contract RootTest is BaseTest {
         vm.startPrank(admin);
         WOLF_TOKEN.mint(address(Alice), 100000);
         WOLF_TOKEN.mint(address(Bob), 100000);
+        WOLF_TOKEN.mint(address(Chris), 100000);
         vm.stopPrank();
     }
 
@@ -83,7 +85,7 @@ contract RootTest is BaseTest {
             console2.log("wolfs[%s] %d", i, wolfs[i]);
         }
 
-        (int16 _x, int16 _y, address _owner, uint32 _id, uint32 _blood, uint32 _bornTime, uint32 _updateTime, uint256 _height ,uint256 _value) = room.getWolf(2);
+        (int16 _x, int16 _y, address _owner, uint32 _id, uint256 _blood, uint32 _bornTime, uint32 _updateTime, uint256 _height) = room.getWolf(2);
         console2.log("x %s", _x);
         console2.log("y %s", _y);
         console2.log("address %s", _owner);
@@ -92,7 +94,6 @@ contract RootTest is BaseTest {
         console2.log("bornTime %s", _bornTime);
         console2.log("updateTime %s", _updateTime);
         console2.log("height %s", _height);
-        console2.log("value %s", _value);
     }
 
     //forge test --match-test test_buy_and_sell_grass -vvv
@@ -235,7 +236,7 @@ contract RootTest is BaseTest {
         uint32 sheepNumAtMap1 = room.getSpecieNumAt(1, 2, 2);
         uint32[] memory sheep1 = room.getSpecieIdsAt(1, 2, 2);
         for (uint8 i=0; i < sheepNumAtMap1; i++) {
-            (int16 x, int16 y, address owner, uint32 sheepId, uint32 bt, uint32 ut, uint32 _blood ,uint256 height, uint256 value) = room.getSheep(sheep1[i]);
+            (int16 x, int16 y, address owner, uint32 sheepId, uint256 _blood, uint32 bt, uint32 ut ,uint256 height) = room.getSheep(sheep1[i]);
             console2.log("sheepId id %s", sheepId);
         }
 
@@ -245,7 +246,7 @@ contract RootTest is BaseTest {
         uint32 wolfNumAtMap1 = room.getSpecieNumAt(2, 1, 1);
         uint32[] memory wolf1 = room.getSpecieIdsAt(1, 2, 2);
         for (uint8 i=0; i < wolfNumAtMap1; i++) {
-            (int16 x, int16 y, address owner, uint32 wolfId, uint32 bt, uint32 ut, uint32 _blood ,uint256 height, uint256 value) = room.getWolf(wolf1[i]);
+            (int16 x, int16 y, address owner, uint32 wolfId, uint256 _blood, uint32 bt, uint32 ut,uint256 height) = room.getWolf(wolf1[i]);
             console2.log("wolfId id %s", wolfId);
         }
 
@@ -282,6 +283,8 @@ contract RootTest is BaseTest {
     //forge test --match-test test_lighting -vvv
     function test_lighting() public {
 
+        vm.roll(1);
+        vm.warp(initBlockTime);
         room.setGenCoordinateMocked(1, 1);
         buy_wolf(address(Alice));
         buy_wolf(address(Bob));
@@ -289,10 +292,38 @@ contract RootTest is BaseTest {
         uint32 totalWolfs = room.totalWolf();
         assertEq(totalWolfs, 4);
 
+        vm.roll(2);
+        vm.warp(initBlockTime + 1 days);
         room.lightning_external();
         totalWolfs = room.totalWolf();
-        // console2.log("totalWolfs ", totalWolfs);
+        console2.log("totalWolfs ", totalWolfs);
         assertEq(totalWolfs, 0);
+    }
+
+    //forge test --match-test test_trigger_lighting -vvv
+    function test_trigger_lighting() public {
+
+        room.setWolfLimit(6);
+        room.setGenCoordinateMocked(1, 1);
+
+        // console2.log("===== day 1 ===== ");
+        vm.roll(1);
+        vm.warp(initBlockTime);
+        buy_wolf(address(Alice));
+        
+        // console2.log("===== day 2 ===== ");
+        // vm.roll(2);
+        // vm.warp(initBlockTime + 2 days);
+        buy_wolf(address(Bob));
+
+        console2.log("===== day 3 ===== ");
+        vm.roll(3);
+        vm.warp(initBlockTime + 2 days);
+        buy_wolf(address(Chris));
+
+        uint32 totalWolfs = room.totalWolf();
+        assertEq(totalWolfs, 2);
+
     }
 
 
