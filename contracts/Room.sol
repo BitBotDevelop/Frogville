@@ -33,11 +33,11 @@ contract Room {
         int16 y;
         address owner;
         uint32 id; //唯一id
-        uint32 blood; //血量
+        uint256 blood; //血量
         uint32 bornTime; //出生时间
         uint32 updateTime; //更新时间
         uint256 height;
-        uint256 value; //当前资产价值
+        // uint256 value; //当前资产价值
     }
 
     struct Sheep {
@@ -45,11 +45,11 @@ contract Room {
         int16 y;
         address owner;
         uint32 id; //唯一id
-        uint32 blood; //血量
+        uint256 blood; //血量
         uint32 bornTime; //出生时间
         uint32 updateTime; //更新时间
         uint256 height;
-        uint256 value; //当前资产价值
+        // uint256 value; //当前资产价值
     }
 
     struct Grass {
@@ -60,7 +60,7 @@ contract Room {
         uint32 bornTime; //出生时间
         uint32 updateTime; //更新时间
         uint256 height;
-        uint256 value; //当前资产价值
+        uint256 blood; //当前资产价值
     }
 
     uint8 public constant WOLF_TYPE = 2;
@@ -222,7 +222,7 @@ contract Room {
                 }
             }
 
-            totalValue += updateGrassValue(grass.value, grass.updateTime);
+            totalValue += updateGrassValue(grass.blood, grass.updateTime);
             burnGrass(grassId);
         }
 
@@ -271,7 +271,7 @@ contract Room {
                 }
             }
 
-            totalValue += updateSheepValue(sheep.value, sheep.updateTime);
+            totalValue += updateSheepValue(sheep.blood, sheep.updateTime);
             burnSheep(sheepId);
         }
 
@@ -320,7 +320,7 @@ contract Room {
                 }
             }
 
-            totalValue += updateWolfValue(wolf.value, wolf.updateTime);
+            totalValue += updateWolfValue(wolf.blood, wolf.updateTime);
             burnWolf(wolfId);
         }
 
@@ -360,7 +360,7 @@ contract Room {
             action(x, y);
 
             //4.storage
-            born(species, x, y, to, id, 12345);
+            born(species, x, y, to, id, 0);
         }
 
         updateAssetUniqueId(species, id);
@@ -402,15 +402,15 @@ contract Room {
         uint256 addTeamTotal;
 
         uint32 wolfNum = wolfMapNum[_x][_y];
-        uint32[] storage wolfIds = wolfMap[_x][_y];
+        uint32[] memory wolfIds = wolfMap[_x][_y];
         for (uint32 i = 0; i < wolfNum; ++i) {
             uint32 wolfId = wolfIds[i];
             Wolf storage wolf = id2Wolf[wolfId];
             if (wolf.height == block.number) {
                 continue;
             }
-            console2.log(" before wolf blood %s", wolf.blood);
-            uint32 blood = reduceBlood(WOLF_TYPE, wolf.blood, wolf.updateTime);
+            // console2.log(" before wolf blood %s", wolf.blood);
+            uint256 blood = reduceBlood(WOLF_TYPE, wolf.blood, wolf.updateTime);
             if (blood > 0) {
                 // move
                 (uint256 value, uint256 forPool, uint256 forTeam) = moveAndEat(_x, _y, wolfId, WOLF_TYPE);
@@ -422,10 +422,11 @@ contract Room {
                 addPoolTotal += forPool;
                 addTeamTotal += forTeam;
             } else {
+                // console2.log("burnWolf %s", wolfId);
                 burnWolf(wolfId);
                 //emit event
             }
-            console2.log(" after wolf blood %s", wolf.blood);
+            // console2.log(" after wolf blood %s", wolf.blood);
         }
         return (addPoolTotal, addTeamTotal);
     }
@@ -442,11 +443,11 @@ contract Room {
             if (sheep.height == block.number) {
                 continue;
             }
-            uint32 blood = reduceBlood(SHEEP_TYPE, sheep.blood, sheep.updateTime);
+            uint256 blood = reduceBlood(SHEEP_TYPE, sheep.blood, sheep.updateTime);
             if (blood > 0) {
                 // move
                 (uint256 value, uint256 forPool, uint256 forTeam) = moveAndEat(_x, _y, sheepId, SHEEP_TYPE);
-                sheep.value += value;
+                sheep.blood += uint32(value);
                 sheep.blood = blood;
                 sheep.updateTime = uint32(block.timestamp);
                 sheep.height = block.number;
@@ -473,12 +474,12 @@ contract Room {
                 continue;
             }
             uint256 grassValue = updateGrassValue(
-                grass.value,
+                grass.blood,
                 grass.updateTime
             );
 
             //grass growing
-            grass.value = grassValue;
+            grass.blood = grassValue;
             grass.updateTime = uint32(block.timestamp);
             grass.height = block.number;
 
@@ -543,7 +544,7 @@ contract Room {
             for (uint32 i = 0; i < sheepNum && i < EAT_LIMIT; ++i) {
                 uint32 sheepId = sheepIds[i];
                 Sheep storage sheep = id2Sheep[sheepId];
-                uint32 blood = reduceBlood(SHEEP_TYPE, sheep.blood, sheep.updateTime);
+                uint256 blood = reduceBlood(SHEEP_TYPE, sheep.blood, sheep.updateTime);
                 console2.log("sheepId %s ", sheepId);
                 console2.log("before sheep blood ", sheep.blood);
                 if (blood > 20) {
@@ -589,7 +590,7 @@ contract Room {
                 uint32 grassId = grassIds[i];
                 Grass storage grass = id2Grass[grassId];
                 uint256 grassValue = updateGrassValue(
-                    grass.value,
+                    grass.blood,
                     grass.updateTime
                 );
 
@@ -685,7 +686,7 @@ contract Room {
         wolf.blood = 0;
         wolf.bornTime = 0;
         wolf.updateTime = 0;
-        wolf.value = 0;
+        wolf.blood = 0;
 
         totalWolf -= 1;
     }
@@ -713,7 +714,7 @@ contract Room {
         sheep.blood = 0;
         sheep.bornTime = 0;
         sheep.updateTime = 0;
-        sheep.value = 0;
+        sheep.blood = 0;
 
         totalSheep -= 1;
     }
@@ -751,7 +752,7 @@ contract Room {
         grass.owner = address(0);
         grass.bornTime = 0;
         grass.updateTime = 0;
-        grass.value = 0;
+        grass.blood = 0;
 
         totalGrass -= 1;
     }
@@ -767,6 +768,13 @@ contract Room {
         for (uint32 i=0; i < totalWolf; ++i) {
             uint32 wolfId = aliveWolfs[i];
             Wolf storage wolf = id2Wolf[wolfId];
+            if (wolf.bornTime == uint32(block.timestamp)) {
+                // console2.log("skip wolfId %s", wolfId);
+                continue;
+            }
+            // console2.log("wolfId %s", wolfId);
+            // console2.log("wolf.blood %s", wolf.blood);
+
             if (wolf.blood > 250) {
                 wolf.blood -= 250;
             } else {
@@ -776,8 +784,20 @@ contract Room {
         }
 
         for (uint32 i = 0; i < size; ++i) {
+            // console2.log("burn wolfId %s", needBurnWolfIds[i]);
             burnWolf(needBurnWolfIds[i]);    
         }
+    }
+
+    function divise(uint32 id, address to, uint256 blood , int16 _x, int16 _y) internal {
+        uint32 newId = totalWolf++;
+        if (newId + 2 > WOLF_LIMIT) {
+            lightning();
+        }
+
+        (int16 x, int16 y) = genCoordinate(_x, _y, id);
+        born(WOLF_TYPE, x, y, to, newId, blood);
+        born(WOLF_TYPE, x, y, to, newId + 1, blood);
     }
 
     function born(
@@ -797,7 +817,7 @@ contract Room {
                 uint32(block.timestamp),
                 uint32(block.timestamp),
                 block.number,
-                value
+                2
             );
             grassMapNum[x][y] += 1;
             grassMap[x][y].push(id);
@@ -811,11 +831,10 @@ contract Room {
                 y,
                 to,
                 id,
-                100,
+                50,
                 uint32(block.timestamp),
                 uint32(block.timestamp),
-                block.number,
-                value
+                block.number
             );
             sheepMapNum[x][y] += 1;
             sheepMap[x][y].push(id);
@@ -824,16 +843,16 @@ contract Room {
             id2Sheep[id] = sheep;
             aliveSheeps.push(id);
         } else {
+            uint32 _blood = value == 0 ? 250 : uint32(value);
             Wolf memory wolf = Wolf(
                 x,
                 y,
                 to,
                 id,
-                100,
+                _blood,
                 uint32(block.timestamp),
                 uint32(block.timestamp),
-                block.number,
-                value
+                block.number
             );
             wolfMapNum[x][y] += 1;
             wolfMap[x][y].push(id);
@@ -841,10 +860,13 @@ contract Room {
             wolfBalanceOfOwner[to] += 1;
             id2Wolf[id] = wolf;
             aliveWolfs.push(id);
+            // uint32 _totalWolf = totalWolf;
             totalWolf += 1;
             if (totalWolf >= WOLF_LIMIT) {
+                // console2.log("trigger lightning");
                 lightning();
             }
+            // totalWolf = _totalWolf;
         }
     }
 
@@ -886,11 +908,11 @@ contract Room {
 
     function reduceBlood(
         uint8 species,
-        uint32 blood,
-        uint32 operateTime
-    ) internal returns (uint32) {
-        uint32 diffTime = (uint32(block.timestamp) - operateTime) / 1 hours;
-        uint32 reducedBlood;
+        uint256 blood,
+        uint256 operateTime
+    ) internal returns (uint256) {
+        uint256 diffTime = (block.timestamp - operateTime) / 1 hours;
+        uint256 reducedBlood;
         if (species == WOLF_TYPE) {
             reducedBlood = diffTime * 5;
         } else if (species == SHEEP_TYPE) {
@@ -1024,22 +1046,36 @@ contract Room {
     }
 
 
-    function getWolf(uint32 id) external view returns (int16, int16, address, uint32, uint32, uint32, uint32, uint256, uint256) {
+    function getWolf(uint32 id) external view returns (int16, int16, address, uint32, uint256, uint32, uint32, uint256) {
         Wolf memory wolf = id2Wolf[id];
-        return (wolf.x, wolf.y, wolf.owner, wolf.id, wolf.blood, wolf.bornTime, wolf.updateTime, wolf.height, wolf.value);
+        return (wolf.x, wolf.y, wolf.owner, wolf.id, wolf.blood, wolf.bornTime, wolf.updateTime, wolf.height);
     }
 
-    function getSheep(uint32 id) external view returns (int16, int16, address, uint32, uint32, uint32, uint32, uint256, uint256) {
+    function getSheep(uint32 id) external view returns (int16, int16, address, uint32, uint256, uint32, uint32, uint256) {
         Sheep memory sheep = id2Sheep[id];
-        return (sheep.x, sheep.y, sheep.owner, sheep.id, sheep.blood, sheep.bornTime, sheep.updateTime, sheep.height ,sheep.value);
+        return (sheep.x, sheep.y, sheep.owner, sheep.id, sheep.blood, sheep.bornTime, sheep.updateTime, sheep.height);
     }
 
     function getGrass(uint32 id) external view returns (int16, int16, address, uint32, uint32, uint32, uint256, uint256) {
         Grass memory grass = id2Grass[id];
-        return (grass.x, grass.y, grass.owner, grass.id, grass.bornTime, grass.updateTime, grass.height, grass.value);
+        return (grass.x, grass.y, grass.owner, grass.id, grass.bornTime, grass.updateTime, grass.height, grass.blood);
     }
 
     function encodeInitParam(uint256 _wolfPrice, uint256 _sheepPrice, uint256 _grassPrice, address _usdt, address _treasury) public pure returns (bytes memory) {
         return abi.encodeWithSelector(RoomInitializable.initialize.selector, _wolfPrice, _sheepPrice, _grassPrice, _usdt, _treasury);
+    }
+
+    function setWolfLimit(uint32 _limit) external {
+        WOLF_LIMIT = _limit;
+    }
+
+    function setWolfBloodForTest(uint8 species, uint32 id, uint256 blood) external {
+        if (species == WOLF_TYPE) {
+            id2Wolf[id].blood = blood;
+        } else if (species == SHEEP_TYPE) {
+            id2Sheep[id].blood = blood;
+        } else {
+            id2Grass[id].blood = blood;
+        }
     }
 }
